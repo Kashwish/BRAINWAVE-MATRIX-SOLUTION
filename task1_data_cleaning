@@ -1,0 +1,84 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load dataset
+file_path = r"D:\python\brainwave intern\taskk 1\sales_data.csv"   
+df = pd.read_csv(file_path, parse_dates=["Date"])
+
+ #Data Cleaning
+print("Rows, Columns:", df.shape)
+
+# Missing values check
+print("Missing Values per Column:", df.isna().sum())
+
+# Duplicate rows check
+print("Duplicate Rows:", df.duplicated().sum())
+
+# Recalculate Total Sales (Quantity × Unit Price)
+df["Computed_Total"] = df["Quantity"] * df["Unit Price"]
+
+# Check mismatch
+mismatch_count = (df["Computed_Total"] != df["Total Sales"]).sum()
+print("\nMismatched 'Total Sales' vs Computed:", mismatch_count)
+
+if mismatch_count > 0:
+    df["Total Sales"] = df["Computed_Total"]
+
+# Extra columns remove
+df.drop(columns=["Computed_Total"], inplace=True)
+
+# Feature Engineering
+df["Month"] = df["Date"].dt.to_period("M").astype(str)
+df["Weekday"] = df["Date"].dt.day_name()
+
+# Save a cleaned copy
+df.to_csv("sales_data_clean.csv", index=False)
+
+# KPIs
+total_sales = int(df["Total Sales"].sum())
+total_orders = len(df)
+total_qty = int(df["Quantity"].sum())
+aov = round(total_sales / total_orders, 2)
+
+print(" Key Performance Indicators")
+print("Total Sales (₹):", total_sales)
+print("Total Orders:", total_orders)
+print("Total Quantity Sold:", total_qty)
+print("Average Order Value (₹):", aov)
+
+# Grouped Summaries
+
+cat_sales = df.groupby("Category")["Total Sales"].sum().sort_values(ascending=False)
+loc_sales = df.groupby("Store Location")["Total Sales"].sum().sort_values(ascending=False)
+prod_sales = df.groupby("Product")["Total Sales"].sum().sort_values(ascending=False)
+daily_sales = df.groupby("Date")["Total Sales"].sum()
+
+print("\n--- Category-wise Sales ---")
+print(cat_sales)
+
+print("\n--- Location-wise Sales ---")
+print(loc_sales)
+
+print("\n--- Product-wise Sales ---")
+print(prod_sales)
+
+print("\n--- Daily Sales Trend (First 10 days) ---")
+print(daily_sales.head(10))
+
+#  Visualization (All in one window)
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+
+# 1. Category-wise Sales
+df.groupby("Category")["Total Sales"].sum().plot(kind="bar", ax=axes[0,0], color="skyblue", title="Category-wise Sales")
+
+# 2. Location-wise Sales
+df.groupby("Store Location")["Total Sales"].sum().plot(kind="bar", ax=axes[0,1], color="orange", title="Location-wise Sales")
+
+# 3. Top 5 Products
+df.groupby("Product")["Total Sales"].sum().nlargest(5).plot(kind="bar", ax=axes[1,0], color="green", title="Top 5 Products")
+
+# 4. Daily Sales Trend
+df.groupby("Date")["Total Sales"].sum().plot(kind="line", marker="o", ax=axes[1,1], color="red", title="Daily Sales Trend")
+
+plt.tight_layout()
+plt.show()
